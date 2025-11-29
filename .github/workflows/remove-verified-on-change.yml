@@ -1,0 +1,26 @@
+name: Remove Verified Label When SQL Changes
+
+on:
+  pull_request:
+    types: [synchronize]
+
+jobs:
+  unverify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check if SQL files changed
+        id: check_sql
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '\.sql$'; then
+            echo "sql_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "sql_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Remove Verified label
+        if: steps.check_sql.outputs.sql_changed == 'true'
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          labels: "Verified"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
