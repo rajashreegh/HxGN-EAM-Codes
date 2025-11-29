@@ -3,11 +3,14 @@ name: Require Verified Label
 on:
   pull_request:
     types: [opened, labeled, unlabeled, synchronize]
-    branches: [main]
+    branches: [main]   # triggers only for PRs targeting main
 
 jobs:
   verify-label:
     runs-on: ubuntu-latest
+
+    # Only run if PR is from dev → main
+    if: github.head_ref == 'dev' && github.base_ref == 'main'
 
     steps:
       - name: Fail if Verified label is missing
