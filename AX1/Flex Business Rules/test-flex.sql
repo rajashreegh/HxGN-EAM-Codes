@@ -1,1 +1,1 @@
-select * from dummy_table;
+select * from dummy_table where col_name = 'ABC';
