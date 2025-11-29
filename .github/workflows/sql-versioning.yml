@@ -15,29 +15,31 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.x'
-
       - name: Add version to SQL files
         run: |
           echo "Processing SQL files..."
-          for file in $(find . -type f -name "*.sql"); do
-            echo "Processing $file"
 
-            # Extract existing version number
-            VERSION_LINE=$(grep -i "^-- Version:" "$file" || true)
-            if [ -z "$VERSION_LINE" ]; then
-              VERSION=1
-              echo "No version found → adding Version: 1"
-              sed -i "1s/^/-- Version: $VERSION\n/" "$file"
-            else
-              CURRENT=$(echo $VERSION_LINE | awk '{print $3}')
-              NEW=$((CURRENT + 1))
-              echo "Updating version $CURRENT → $NEW"
-              sed -i "s/^-- Version: .*/-- Version: $NEW/" "$file"
-            fi
+          # Process ONLY these two folders
+          for folder in "Flex Business Rules" "Extensible Frameworks"; do
+            echo "Checking folder: $folder"
+
+            # Find SQL files safely
+            find "$folder" -type f -name "*.sql" | while read -r file; do
+              echo "Processing $file"
+
+              # Try to read version line
+              VERSION_LINE=$(grep -i "^-- Version:" "$file" || true)
+
+              if [ -z "$VERSION_LINE" ]; then
+                echo "No version found → adding Version: 1"
+                sed -i "1s|^|-- Version: 1\n|" "$file"
+              else
+                CURRENT=$(echo "$VERSION_LINE" | awk '{print $3}')
+                NEW=$((CURRENT + 1))
+                echo "Updating version $CURRENT → $NEW"
+                sed -i "s/^-- Version: .*/-- Version: $NEW/" "$file"
+              fi
+            done
           done
 
       - name: Commit version update to main
@@ -50,6 +52,7 @@ jobs:
 
       - name: Sync dev with updated SQL versions
         run: |
+          git fetch origin
           git checkout dev
-          git merge main --no-edit
+          git merge origin/main --no-edit
           git push origin dev
