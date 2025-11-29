@@ -1,0 +1,17 @@
+name: Remove Verified Label on New Change
+
+on:
+  pull_request:
+    types: [synchronize]
+    branches: [main]
+
+jobs:
+  remove-verified:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Remove Verified label when code changes
+        if: "contains(github.event.pull_request.labels.*.name, 'Verified')"
+        uses: actions-ecosystem/action-remove-labels@v1
+        with:
+          labels: Verified
