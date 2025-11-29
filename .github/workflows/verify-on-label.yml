@@ -15,23 +15,25 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0   # Fetch full history so base branch exists
 
       - name: Find SQL files changed in PR
         id: files
         run: |
+          # Store changed SQL files between PR base and head
+          CHANGED_SQL=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD -- '*.sql')
           echo "sql_files<<EOF" >> $GITHUB_OUTPUT
-          git diff --name-only origin/${{ github.event.pull_request.base.ref }} HEAD -- '*.sql' >> $GITHUB_OUTPUT
+          echo "$CHANGED_SQL" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Mark SQL files as VERIFIED
         run: |
           while IFS= read -r file; do
             echo "Updating status in: $file"
-            # Replace NOT-VERIFIED or add new VERIFIED line
             if grep -q -- "-- STATUS:" "$file"; then
               sed -i 's/-- STATUS:.*/-- STATUS: VERIFIED/' "$file"
             else
-              sed -i '1a -- STATUS: VERIFIED' "$file"
+              sed -i '1i -- STATUS: VERIFIED' "$file"
             fi
           done <<< "${{ steps.files.outputs.sql_files }}"
 
@@ -39,7 +41,6 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-
           git add .
-          git commit -m "Verified SQL files automatically based on label"
+          git commit -m "Verified SQL files automatically based on label" || echo "No changes to commit"
           git push
