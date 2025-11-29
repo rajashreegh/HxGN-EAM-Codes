@@ -1,0 +1,55 @@
+name: SQL Auto Versioning
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  version-sql:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Add version to SQL files
+        run: |
+          echo "Processing SQL files..."
+          for file in $(find . -type f -name "*.sql"); do
+            echo "Processing $file"
+
+            # Extract existing version number
+            VERSION_LINE=$(grep -i "^-- Version:" "$file" || true)
+            if [ -z "$VERSION_LINE" ]; then
+              VERSION=1
+              echo "No version found → adding Version: 1"
+              sed -i "1s/^/-- Version: $VERSION\n/" "$file"
+            else
+              CURRENT=$(echo $VERSION_LINE | awk '{print $3}')
+              NEW=$((CURRENT + 1))
+              echo "Updating version $CURRENT → $NEW"
+              sed -i "s/^-- Version: .*/-- Version: $NEW/" "$file"
+            fi
+          done
+
+      - name: Commit version update to main
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git add .
+          git commit -m "Auto-update SQL version after merge" || echo "No changes to commit"
+          git push origin main
+
+      - name: Sync dev with updated SQL versions
+        run: |
+          git checkout dev
+          git merge main --no-edit
+          git push origin dev
