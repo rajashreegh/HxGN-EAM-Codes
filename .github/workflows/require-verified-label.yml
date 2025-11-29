@@ -1,0 +1,17 @@
+name: Require Verified Label
+
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+    branches: [main]
+
+jobs:
+  verify-label:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fail if Verified label is missing
+        if: "! contains(github.event.pull_request.labels.*.name, 'Verified')"
+        run: |
+          echo "PR is missing the 'Verified' label."
+          exit 1
