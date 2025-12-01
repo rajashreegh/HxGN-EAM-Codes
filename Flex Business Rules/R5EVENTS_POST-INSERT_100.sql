@@ -1,0 +1,1 @@
+UPDATE wo SET wo_status = 'CLOSED' WHERE wo_id = :wo_id;
